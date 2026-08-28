@@ -216,3 +216,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Project files
+lidar-camera-calibration/data/
+object-detection-tracking/data/
+object-detection-tracking/yolov5s.pt
+object-detection-tracking/yolov5l.pt
