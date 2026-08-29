@@ -8,7 +8,7 @@ class Frame:
                  frame_id: str,
                  path_im: str,
                  path_lidar: str,
-                 path_calib: str) -> None
+                 path_calib: str) -> None:
 
         self._frame_id = frame_id
         self._path_im = path_im
@@ -86,5 +86,5 @@ class Frame:
         if verbose:
             self.stats()
 
-        return self.raw_lidar, self.u, self.v, self.r
+        return self.im_pts, self.u, self.v, self.r
     
