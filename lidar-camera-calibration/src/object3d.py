@@ -1,3 +1,7 @@
+import cv2
+import numpy as np
+
+
 class Object3D:
 
     def __init__(self,
@@ -45,3 +49,21 @@ class Object3D:
             f"{self.length}), loc=({self.loc_x}, {self.loc_y}, {self.loc_z}), "
             f"rotation_y={self.rotation_y})"
         )
+
+    def draw(self, img: np.ndarray) -> None:
+        """Draws the 2D bounding box on a given image with object type label."""
+
+        cv2.rectangle(img, 
+                    (int(self.bbox_x1), int(self.bbox_y1)),
+                    (int(self.bbox_x2), int(self.bbox_y2)),
+                    color=(0, 255, 0), # green
+                    thickness=2)
+        
+        # Draw label
+        cv2.putText(img,
+                    self.type,
+                    (int(self.bbox_x1), int(self.bbox_y1) - 5),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    fontScale=0.5,
+                    color=(0, 255, 0),
+                    thickness=1)

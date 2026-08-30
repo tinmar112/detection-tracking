@@ -1,5 +1,6 @@
 from object3d import Object3D
 
+
 class ObjectExtractor:
 
     def __init__(self, path_label: str):

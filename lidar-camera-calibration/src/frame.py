@@ -8,20 +8,20 @@ class Frame:
 
     def __init__(self, 
                  frame_id: str,
-                 path_im: str,
+                 path_img: str,
                  path_lidar: str,
                  path_calib: str,
                  path_label: str) -> None:
 
         self._frame_id = frame_id
-        self._path_im = path_im
+        self._path_img = path_img
         self._path_lidar = path_lidar
         self._path_calib = path_calib
         self._path_label = path_label
 
     def load_image(self) -> None:
 
-        self.img = cv2.imread(self._path_im+self._frame_id+'.png')
+        self.img = cv2.imread(self._path_img+self._frame_id+'.png')
         self.H, self.W = self.img.shape[:2] #type: ignore
         
     def load_calibration(self) -> None:
@@ -79,7 +79,7 @@ class Frame:
         extractor = ObjectExtractor(path_label=self._path_label)
         self.objects = extractor.extract(frame_id=self._frame_id)
 
-    def load_frame(self, verbose: bool) -> tuple:
+    def load(self, verbose: bool) -> None:
 
         self.load_image()
         self.load_calibration()
@@ -88,18 +88,38 @@ class Frame:
 
         if verbose:
             self.stats()
-
-        return self.im_pts, self.u, self.v, self.r
     
     def stats(self):
-        print(f'Frame ID: {self._frame_id}')
-        print(f'Image Resolution: {self.W}x{self.H}')
-        print(f'Raw Lidar: {self.im_pts.shape[1]} points')
-        print(f'Filtered Lidar: {len(self.u)} points')
-        print('Depth:')
-        print(f'\t Min: {self.depth.min()} m')
-        print(f'\t Max: {self.depth.max()} m')
-        print(f'\t Median: {np.median(self.depth)} m')
+        print(
+            f'Frame ID: {self._frame_id}\n'
+            f'Image Resolution: {self.W}x{self.H}\n'
+            f'Raw Lidar: {self.im_pts.shape[1]} points\n'
+            f'Filtered Lidar: {len(self.u)} points\n'
+            f'Depth:\n'
+            f'\t Min: {self.depth.min()} m\n'
+            f'\t Max: {self.depth.max()} m\n'
+            f'\t Median: {np.median(self.depth)} m'
+            )
 
     def display(self, boxes: bool = True) -> None:
-        pass
+
+        r_norm = np.clip(self.r, 0, 1)
+
+        colors = cv2.applyColorMap((r_norm * 255).astype(np.uint8), cv2.COLORMAP_JET).reshape(-1, 3)
+    
+        # draw each point as a filled circle on a copy
+        overlay = self.img.copy() #type: ignore
+
+        for i in range(len(self.u)):
+            cv2.circle(overlay, (int(self.u[i]), int(self.v[i])),
+                    radius=2, color=colors[i].tolist(), thickness=-1)
+    
+        if boxes: # then draw bounding boxes
+
+            for object in self.objects:
+                object.draw(img=overlay)
+    
+        # blend so points don't fully hide the road scene
+        out = cv2.addWeighted(overlay, 0.7, self.img, 0.3, 0) #type: ignore
+
+        cv2.imshow("lidar overlay", out); cv2.waitKey(0)
