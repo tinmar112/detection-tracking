@@ -1,6 +1,8 @@
 import cv2
 import numpy as np
 
+from object_extractor import ObjectExtractor
+
 
 class Frame:
 
@@ -8,14 +10,14 @@ class Frame:
                  frame_id: str,
                  path_im: str,
                  path_lidar: str,
-                 path_calib: str) -> None:
+                 path_calib: str,
+                 path_label: str) -> None:
 
         self._frame_id = frame_id
         self._path_im = path_im
         self._path_lidar = path_lidar
         self._path_calib = path_calib
-
-        self.calib_matrix = np.empty((3,4))
+        self._path_label = path_label
 
     def load_image(self) -> None:
 
@@ -44,29 +46,51 @@ class Frame:
 
     def project_lidar(self) -> None:
 
-        raw_points = np.fromfile(self._path_lidar+self._frame_id+'.bin', dtype=np.float32).reshape(-1, 4)
+        try:
 
-        # convert to image pixels
+            raw_points = np.fromfile(self._path_lidar+self._frame_id+'.bin', dtype=np.float32).reshape(-1, 4)
 
-        pts, reflectance = raw_points[:, :3], raw_points[:, 3]
-        n = pts.shape[0]
-        h_pts = np.hstack([pts, np.ones((n, 1))]) # to homogeneous coordinates
-        im_pts = self.calib_matrix @ h_pts.T # (3x4) @ (4, N) -> needs (x,y,z,1) vertically
+            # convert to image pixels
 
-        u = im_pts[0] / im_pts[2] # back to cartesian
-        v = im_pts[1] / im_pts[2]
+            pts, reflectance = raw_points[:, :3], raw_points[:, 3]
+            n = pts.shape[0]
+            h_pts = np.hstack([pts, np.ones((n, 1))]) # to homogeneous coordinates
+            im_pts = self.calib_matrix @ h_pts.T # (3x4) @ (4, N) -> needs (x,y,z,1) vertically
 
-        # only keep valid points: ahead of vehicle + finite & not NaN
-        depth = im_pts[2] # z in camera frame (metres)
-        valid = (depth > 0) & (u >= 0) & (u < self.W) & (v >= 0) & (v < self.H) & np.isfinite(reflectance)
-        d_v, u_v, v_v, r_v = depth[valid], u[valid], v[valid], reflectance[valid]
+            u = im_pts[0] / im_pts[2] # back to cartesian
+            v = im_pts[1] / im_pts[2]
 
-        self.im_pts = im_pts # points x,y,z in metres
-        self.depth = d_v
-        self.u = u_v
-        self.v = v_v
-        self.r = r_v
+            # only keep valid points: ahead of vehicle + finite & not NaN
+            depth = im_pts[2] # z in camera frame (metres)
+            valid = (depth > 0) & (u >= 0) & (u < self.W) & (v >= 0) & (v < self.H) & np.isfinite(reflectance)
+            d_v, u_v, v_v, r_v = depth[valid], u[valid], v[valid], reflectance[valid]
 
+            self.im_pts = im_pts # points x,y,z in metres
+            self.depth = d_v
+            self.u = u_v
+            self.v = v_v
+            self.r = r_v
+
+        except AttributeError:
+            print('The calibration matrix must be loaded before projecting lidar coordinates onto the image.')
+
+    def load_labels(self) -> None:
+
+        extractor = ObjectExtractor(path_label=self._path_label)
+        self.objects = extractor.extract(frame_id=self._frame_id)
+
+    def load_frame(self, verbose: bool) -> tuple:
+
+        self.load_image()
+        self.load_calibration()
+        self.project_lidar()
+        self.load_labels()
+
+        if verbose:
+            self.stats()
+
+        return self.im_pts, self.u, self.v, self.r
+    
     def stats(self):
         print(f'Frame ID: {self._frame_id}')
         print(f'Image Resolution: {self.W}x{self.H}')
@@ -77,14 +101,5 @@ class Frame:
         print(f'\t Max: {self.depth.max()} m')
         print(f'\t Median: {np.median(self.depth)} m')
 
-    def load_camera_lidar(self, verbose: bool) -> tuple:
-
-        self.load_image()
-        self.load_calibration()
-        self.project_lidar()
-
-        if verbose:
-            self.stats()
-
-        return self.im_pts, self.u, self.v, self.r
-    
+    def display(self, boxes: bool = True) -> None:
+        pass

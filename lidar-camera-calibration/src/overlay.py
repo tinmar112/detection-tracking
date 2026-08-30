@@ -3,11 +3,11 @@ import numpy as np
 from frame import Frame
 
 
-def overlay(frame_id: str, path_im: str, path_lidar:str , path_calib: str) -> None:
+def overlay(frame_id: str, path_im: str, path_lidar:str , path_calib: str, path_label: str) -> None:
 
-    frame = Frame(frame_id=frame_id, path_im=path_im, path_lidar=path_lidar, path_calib=path_calib)
+    frame = Frame(frame_id=frame_id, path_im=path_im, path_lidar=path_lidar, path_calib=path_calib, path_label=path_label)
 
-    _, u, v, r = frame.load_camera_lidar(verbose=True)
+    _, u, v, r = frame.load_frame(verbose=True)
 
     # map reflectance to a colour
     r_norm = np.clip(r, 0, 1)
