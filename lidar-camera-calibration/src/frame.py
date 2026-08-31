@@ -69,9 +69,9 @@ class Frame:
             valid = (depth > 0) & (u >= 0) & (u < self.W) & (v >= 0) & (v < self.H) & np.isfinite(reflectance)
             d_v, u_v, v_v, r_v = depth[valid], u[valid], v[valid], reflectance[valid]
 
-            self.raw_lidar = raw_points
-            self.im_pts = im_pts # points x,y,z in metres
-            self.depth = d_v
+            self.raw_lidar = raw_points # points x,y,z in lidar coords
+            self.transformed_lidar = im_pts # points x,y,z in camera coords
+            self.valid_lidar = d_v
             self.u = u_v
             self.v = v_v
             self.r = r_v
@@ -98,7 +98,7 @@ class Frame:
         print(
             f'Frame ID: {self._frame_id}\n'
             f'Image Resolution: {self.W}x{self.H}\n'
-            f'Raw Lidar: {self.im_pts.shape[1]} points\n'
+            f'Raw Lidar: {self.transformed_lidar.shape[1]} points\n'
             f'Filtered Lidar: {len(self.u)} points\n'
             f'Depth:\n'
             f'\t Min: {self.depth.min()} m\n'
