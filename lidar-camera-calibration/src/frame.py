@@ -1,4 +1,7 @@
+from typing import Literal
+
 import cv2
+import matplotlib.pyplot as plt
 import numpy as np
 
 from object_extractor import ObjectExtractor
@@ -41,8 +44,9 @@ class Frame:
                       dtype=np.float32).reshape(3,4)
         tr_velo_to_cam = np.eye(4, dtype=np.float32) # add a homogeneous row to make 4x4
         tr_velo_to_cam[:3, :] = tr
-        
-        self.calib_matrix = p2 @ r0_rect @ tr_velo_to_cam
+
+        self.lidar_to_cam = r0_rect @ tr_velo_to_cam
+        self.lidar_to_pixels = p2 @ self.lidar_to_cam
 
     def project_lidar(self) -> None:
 
@@ -55,7 +59,7 @@ class Frame:
             pts, reflectance = raw_points[:, :3], raw_points[:, 3]
             n = pts.shape[0]
             h_pts = np.hstack([pts, np.ones((n, 1))]) # to homogeneous coordinates
-            im_pts = self.calib_matrix @ h_pts.T # (3x4) @ (4, N) -> needs (x,y,z,1) vertically
+            im_pts = self.lidar_to_pixels @ h_pts.T # (3x4) @ (4, N) -> needs (x,y,z,1) vertically
 
             u = im_pts[0] / im_pts[2] # back to cartesian
             v = im_pts[1] / im_pts[2]
@@ -65,6 +69,7 @@ class Frame:
             valid = (depth > 0) & (u >= 0) & (u < self.W) & (v >= 0) & (v < self.H) & np.isfinite(reflectance)
             d_v, u_v, v_v, r_v = depth[valid], u[valid], v[valid], reflectance[valid]
 
+            self.raw_lidar = raw_points
             self.im_pts = im_pts # points x,y,z in metres
             self.depth = d_v
             self.u = u_v
@@ -117,9 +122,42 @@ class Frame:
         if boxes: # then draw bounding boxes
 
             for object in self.objects:
-                object.draw(img=overlay)
+                object.draw_2D(img=overlay)
     
         # blend so points don't fully hide the road scene
         out = cv2.addWeighted(overlay, 0.7, self.img, 0.3, 0) #type: ignore
 
         cv2.imshow("lidar overlay", out); cv2.waitKey(0)
+    
+    def plot_bev(self, intensity: Literal["z", "r"], boxes: bool = True) -> None:
+
+        if intensity not in ("z", "r"):
+            raise ValueError(f"Unsupported intensity: {intensity!r}")
+
+        x_min, x_max = 0, 50
+        y_min, y_max = -25, 25
+        plt.xlim((x_min,x_max))
+        plt.ylim((y_min,y_max))
+
+        if intensity == 'z':
+            plt.scatter(self.raw_lidar[:,0], self.raw_lidar[:,1],
+                        s=0.5, c=self.raw_lidar[:,2], cmap='jet')
+            plt.colorbar().set_label('Height $z$ (m)')
+        else:
+            plt.scatter(self.raw_lidar[:,0], self.raw_lidar[:,1],
+                        s=0.5, c=self.raw_lidar[:,3], cmap='viridis') # reflectance
+            plt.colorbar().set_label('Reflectance $r$')
+
+        plt.xlabel('$x$ (m): ahead of vehicle')
+        plt.ylabel('$y$ (m): left/right of vehicle')
+        plt.title('LIDAR points (LIDAR coordinate system)\n Vehicle is at the origin.')
+
+        if boxes:
+
+            for object in self.objects:
+                corners = object.corners_3D(conv_matrix=np.linalg.inv(self.lidar_to_cam)) # switching to lidar coordinates
+                x = corners[0, [0, 1, 2, 3, 0, 4, 5, 6, 7, 4]]
+                y = corners[1, [0, 1, 2, 3, 0, 4, 5, 6, 7, 4]]
+                plt.plot(x, y, color='red', linewidth=3.0)
+
+        plt.show()

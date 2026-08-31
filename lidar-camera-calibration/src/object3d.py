@@ -50,7 +50,7 @@ class Object3D:
             f"rotation_y={self.rotation_y})"
         )
 
-    def draw(self, img: np.ndarray) -> None:
+    def draw_2D(self, img: np.ndarray) -> None:
         """Draws the 2D bounding box on a given image with object type label."""
 
         cv2.rectangle(img, 
@@ -67,3 +67,32 @@ class Object3D:
                     fontScale=0.5,
                     color=(0, 255, 0),
                     thickness=1)
+
+    def corners_3D(self, conv_matrix: np.ndarray | None = None) -> np.ndarray:
+
+        # First, computing corners in the camera's coordinate system
+        h, w, l, theta = self.height, self.width, self.length, self.rotation_y
+        x_corners = np.array([-l/2, -l/2,  l/2, l/2, -l/2, -l/2, l/2, l/2])
+        y_corners = np.array([0, 0, 0, 0, -h, -h, -h, -h])
+        z_corners = np.array([-w/2, w/2, w/2, -w/2, -w/2, w/2, w/2, -w/2])
+        corners = np.vstack([x_corners, y_corners, z_corners])
+
+        # Rotation around camera y-axis
+        R = np.array([
+            [ np.cos(theta), 0, np.sin(theta)],
+            [ 0, 1, 0],
+            [-np.sin(theta), 0, np.cos(theta)]
+        ])
+
+        # rotate the object and translate it to its position
+        corners = R @ corners
+        corners = corners + np.array([self.loc_x, self.loc_y, self.loc_z]).reshape((3,1))
+
+        # if required, switch to another coordinate system
+        if conv_matrix is not None:
+            corners_h = np.vstack([corners, np.ones((1, corners.shape[1]))])
+            corners_h = conv_matrix @ corners_h
+            # back to cartesian
+            corners = corners_h[:3,:]/corners_h[3,:]
+
+        return corners
