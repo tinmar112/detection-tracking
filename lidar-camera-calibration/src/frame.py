@@ -98,12 +98,12 @@ class Frame:
         print(
             f'Frame ID: {self._frame_id}\n'
             f'Image Resolution: {self.W}x{self.H}\n'
-            f'Raw Lidar: {self.transformed_lidar.shape[1]} points\n'
-            f'Filtered Lidar: {len(self.u)} points\n'
-            f'Depth:\n'
-            f'\t Min: {self.depth.min()} m\n'
-            f'\t Max: {self.depth.max()} m\n'
-            f'\t Median: {np.median(self.depth)} m'
+            f'Raw LIDAR: {self.transformed_lidar.shape[1]} points\n'
+            f'Filtered LIDAR: {len(self.u)} points\n'
+            f'Depth of Valid LIDAR:\n'
+            f'\t Min: {self.valid_lidar.min()} m\n'
+            f'\t Max: {self.valid_lidar.max()} m\n'
+            f'\t Median: {np.median(self.valid_lidar)} m'
             )
 
     def display(self, boxes: bool = True) -> None:

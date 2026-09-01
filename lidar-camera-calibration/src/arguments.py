@@ -1,5 +1,6 @@
 import argparse
 
+
 def arguments() -> argparse.Namespace:
     """Parses command line arguments for Lidar-Camera Calibration."""
 
@@ -13,7 +14,7 @@ def arguments() -> argparse.Namespace:
 
     parser.add_argument("--frame_id","-f",type=str,
                         help="Frame ID to be displayed. ")
-    
+
     parser.add_argument("--img","-i",type=str,
                         default=DEFAULT_PATH_IMG,
                         help="File from which the image will be loaded. ")
