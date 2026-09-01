@@ -48,15 +48,18 @@ class Frame:
         self.lidar_to_cam = r0_rect @ tr_velo_to_cam
         self.lidar_to_pixels = p2 @ self.lidar_to_cam
 
+    def load_lidar(self) -> None:
+
+        raw_points = np.fromfile(self._path_lidar+self._frame_id+'.bin', dtype=np.float32).reshape(-1, 4)
+        self.raw_lidar = raw_points # points x,y,z in lidar coords
+
     def project_lidar(self) -> None:
+        """Projects LIDAR points into camera coordinates."""
 
         try:
 
-            raw_points = np.fromfile(self._path_lidar+self._frame_id+'.bin', dtype=np.float32).reshape(-1, 4)
-
             # convert to image pixels
-
-            pts, reflectance = raw_points[:, :3], raw_points[:, 3]
+            pts, reflectance = self.raw_lidar[:, :3], self.raw_lidar[:, 3]
             n = pts.shape[0]
             h_pts = np.hstack([pts, np.ones((n, 1))]) # to homogeneous coordinates
             im_pts = self.lidar_to_pixels @ h_pts.T # (3x4) @ (4, N) -> needs (x,y,z,1) vertically
@@ -69,7 +72,6 @@ class Frame:
             valid = (depth > 0) & (u >= 0) & (u < self.W) & (v >= 0) & (v < self.H) & np.isfinite(reflectance)
             d_v, u_v, v_v, r_v = depth[valid], u[valid], v[valid], reflectance[valid]
 
-            self.raw_lidar = raw_points # points x,y,z in lidar coords
             self.transformed_lidar = im_pts # points x,y,z in camera coords
             self.valid_lidar = d_v
             self.u = u_v
@@ -84,28 +86,29 @@ class Frame:
         extractor = ObjectExtractor(path_label=self._path_label)
         self.objects = extractor.extract(frame_id=self._frame_id)
 
-    def load(self, verbose: bool) -> None:
-
-        self.load_image()
-        self.load_calibration()
-        self.project_lidar()
-        self.load_labels()
-
-        if verbose:
-            self.stats()
-    
     def stats(self):
         print(
             f'Frame ID: {self._frame_id}\n'
             f'Image Resolution: {self.W}x{self.H}\n'
             f'Raw LIDAR: {self.transformed_lidar.shape[1]} points\n'
             f'Filtered LIDAR: {len(self.u)} points\n'
-            f'Depth of Valid LIDAR:\n'
-            f'\t Min: {self.valid_lidar.min()} m\n'
-            f'\t Max: {self.valid_lidar.max()} m\n'
+            f'Depth of Raw LIDAR in Camera Coordinates:\n'
+            f'\t Min: {self.transformed_lidar.min()} m\n'
+            f'\t Max: {self.transformed_lidar.max()} m\n'
             f'\t Median: {np.median(self.valid_lidar)} m'
             )
 
+    def load(self, verbose: bool) -> None:
+
+        self.load_image()
+        self.load_calibration()
+        self.load_lidar()
+        self.project_lidar()
+        self.load_labels()
+
+        if verbose:
+            self.stats()
+    
     def display(self, boxes: bool = True) -> None:
 
         r_norm = np.clip(self.r, 0, 1)
