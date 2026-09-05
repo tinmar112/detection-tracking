@@ -93,8 +93,8 @@ class Pillarization:
         y_c = pillars[:,:, 1] - pillars[:,:, 1].mean()
         z_c = pillars[:,:, 2] - pillars[:,:, 2].mean()
 
-        x_center = self._x_min + self._delta_x * pillar_coords[:, 1] + self._delta_x/2
-        y_center = self._y_min + self._delta_y * pillar_coords[:, 0] + self._delta_y/2
+        x_center = (self._x_min + self._delta_x * pillar_coords[:, 1] + self._delta_x/2).astype(np.float32)
+        y_center = (self._y_min + self._delta_y * pillar_coords[:, 0] + self._delta_y/2).astype(np.float32)
 
         # shape: (n_pillars,) -> repeat to (n_pillars, Np_max)
         x_center = np.repeat(x_center[:, None], pillars.shape[1], axis=1)
@@ -103,8 +103,8 @@ class Pillarization:
         x_p = pillars[:,:, 0] - x_center
         y_p = pillars[:,:, 1] - y_center
 
-        new_features = np.stack([x_c, y_c, z_c, x_p, y_p], axis=-1)
-        return np.concatenate([pillars, new_features], axis=-1)
+        new_features = np.stack([x_c, y_c, z_c, x_p, y_p], axis=-1).astype(np.float32)
+        return np.concatenate([pillars, new_features], axis=-1).astype(np.float32)
 
     def scatter_bev(self, pillar_features: torch.Tensor, pillar_coords: np.ndarray):
 

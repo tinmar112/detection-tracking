@@ -61,7 +61,7 @@ class Frame:
             # convert to image pixels
             pts, reflectance = self.raw_lidar[:, :3], self.raw_lidar[:, 3]
             n = pts.shape[0]
-            h_pts = np.hstack([pts, np.ones((n, 1))]) # to homogeneous coordinates
+            h_pts = np.hstack([pts, np.ones((n, 1), dtype=np.float32)]) # to homogeneous coordinates
             im_pts = self.lidar_to_pixels @ h_pts.T # (3x4) @ (4, N) -> needs (x,y,z,1) vertically
 
             u = im_pts[0] / im_pts[2] # back to cartesian

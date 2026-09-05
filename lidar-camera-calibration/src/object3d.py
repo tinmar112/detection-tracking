@@ -72,9 +72,9 @@ class Object3D:
 
         # First, computing corners in the camera's coordinate system
         h, w, l, theta = self.height, self.width, self.length, self.rotation_y
-        x_corners = np.array([-l/2, -l/2,  l/2, l/2, -l/2, -l/2, l/2, l/2])
-        y_corners = np.array([0, 0, 0, 0, -h, -h, -h, -h])
-        z_corners = np.array([-w/2, w/2, w/2, -w/2, -w/2, w/2, w/2, -w/2])
+        x_corners = np.array([-l/2, -l/2,  l/2, l/2, -l/2, -l/2, l/2, l/2], dtype=np.float32)
+        y_corners = np.array([0, 0, 0, 0, -h, -h, -h, -h], dtype=np.float32)
+        z_corners = np.array([-w/2, w/2, w/2, -w/2, -w/2, w/2, w/2, -w/2], dtype=np.float32)
         corners = np.vstack([x_corners, y_corners, z_corners])
 
         # Rotation around camera y-axis
@@ -82,15 +82,15 @@ class Object3D:
             [ np.cos(theta), 0, np.sin(theta)],
             [ 0, 1, 0],
             [-np.sin(theta), 0, np.cos(theta)]
-        ])
+        ], dtype=np.float32)
 
         # rotate the object and translate it to its position
         corners = R @ corners
-        corners = corners + np.array([self.loc_x, self.loc_y, self.loc_z]).reshape((3,1))
+        corners = corners + np.array([self.loc_x, self.loc_y, self.loc_z], dtype=np.float32).reshape((3,1))
 
         # if required, switch to another coordinate system
         if conv_matrix is not None:
-            corners_h = np.vstack([corners, np.ones((1, corners.shape[1]))])
+            corners_h = np.vstack([corners, np.ones((1, corners.shape[1]), dtype=np.float32)])
             corners_h = conv_matrix @ corners_h
             # back to cartesian
             corners = corners_h[:3,:]/corners_h[3,:]
